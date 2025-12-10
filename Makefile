@@ -13,6 +13,9 @@ BUILD_DIR = build
 
 C_SOURCES = \
     src/main.c \
+    src/board/board.c \
+    src/board/clock_config.c \
+    src/board/pin_mux.c \
     $(SDK_DEVICE)/system_MCXA155.c \
     $(SDK_DRIVERS)/fsl_common.c \
     $(SDK_DRIVERS)/fsl_common_arm.c \
@@ -22,7 +25,7 @@ C_SOURCES = \
 
 ASM_SOURCES = $(SDK_DEVICE)/startup_MCXA155.S
 
-INCLUDES = -I$(SDK_CMSIS) -I$(SDK_DEVICE) -I$(SDK_DRIVERS) -Isrc
+INCLUDES = -I$(SDK_CMSIS) -I$(SDK_DEVICE) -I$(SDK_DRIVERS) -Isrc -Isrc/board
 
 CPU = -mcpu=cortex-m33
 FPU = -mfpu=fpv5-sp-d16
@@ -36,7 +39,7 @@ C_OBJECTS = $(addprefix $(BUILD_DIR)/, $(notdir $(C_SOURCES:.c=.o)))
 ASM_OBJECTS = $(addprefix $(BUILD_DIR)/, $(notdir $(ASM_SOURCES:.S=.o)))
 OBJECTS = $(C_OBJECTS) $(ASM_OBJECTS)
 
-vpath %.c $(SDK_DEVICE) $(SDK_DRIVERS) src
+vpath %.c $(SDK_DEVICE) $(SDK_DRIVERS) src src/board
 vpath %.S $(SDK_DEVICE)
 
 .PHONY: all clean help size
