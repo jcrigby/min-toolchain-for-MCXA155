@@ -17,6 +17,7 @@ large downloads during Docker build.
   - `cmsis_version.h` - CMSIS version definitions
   - `cmsis_compiler.h` - Compiler abstraction layer
   - `cmsis_gcc.h` - GCC-specific intrinsics
+  - `m-profile/` - M-profile specific headers (cmsis_gcc_m.h, etc.)
 
 ### NXP MCUXpresso SDK (device/, drivers/)
 
@@ -49,6 +50,7 @@ git clone --depth 1 https://github.com/nxp-mcuxpresso/mcux-sdk.git /tmp/mcux-sdk
 
 # Copy CMSIS
 cp /tmp/cmsis/CMSIS/Core/Include/{core_cm33.h,cmsis_version.h,cmsis_compiler.h,cmsis_gcc.h} sdk/cmsis/
+cp -r /tmp/cmsis/CMSIS/Core/Include/m-profile sdk/cmsis/
 
 # Copy device files
 cp /tmp/mcux-sdk/devices/MCXA155/{MCXA155.h,MCXA155_features.h,system_MCXA155.h,system_MCXA155.c,fsl_device_registers.h} sdk/device/
