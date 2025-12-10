@@ -1,0 +1,16 @@
+version: '3.8'
+services:
+  build:
+    build: .
+    volumes:
+      - .:/workspace
+    working_dir: /workspace
+    command: make clean all
+  shell:
+    build: .
+    volumes:
+      - .:/workspace
+    working_dir: /workspace
+    stdin_open: true
+    tty: true
+    command: /bin/bash
