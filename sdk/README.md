@@ -38,6 +38,10 @@ large downloads during Docker build.
   - `fsl_clock.h/c` - Clock configuration (MCXA155-specific)
   - `fsl_reset.h/c` - Reset control (MCXA155-specific)
   - `fsl_lpuart.h/c` - Low-power UART driver
+  - `fsl_gpio.h/c` - GPIO driver
+  - `fsl_port.h` - Port pin muxing (header only)
+  - `fsl_spc.h/c` - System Power Controller driver
+  - `fsl_debug_console.h` - Debug console stub (minimal, no-op implementation)
 
 ## Updating
 
@@ -60,6 +64,10 @@ cp /tmp/mcux-sdk/devices/MCXA155/gcc/{startup_MCXA155.S,MCXA155_flash.ld} sdk/de
 cp /tmp/mcux-sdk/drivers/common/{fsl_common.h,fsl_common.c,fsl_common_arm.h,fsl_common_arm.c} sdk/drivers/
 cp /tmp/mcux-sdk/devices/MCXA155/drivers/{fsl_clock.h,fsl_clock.c,fsl_reset.h,fsl_reset.c} sdk/drivers/
 cp /tmp/mcux-sdk/drivers/lpuart/{fsl_lpuart.h,fsl_lpuart.c} sdk/drivers/
+cp /tmp/mcux-sdk/drivers/gpio/{fsl_gpio.h,fsl_gpio.c} sdk/drivers/
+cp /tmp/mcux-sdk/drivers/port/fsl_port.h sdk/drivers/
+cp /tmp/mcux-sdk/drivers/spc/{fsl_spc.h,fsl_spc.c} sdk/drivers/
+# Note: fsl_debug_console.h is a local stub, not from upstream
 
 # Update this README with new commit hashes and dates
 ```
