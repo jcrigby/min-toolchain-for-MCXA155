@@ -28,6 +28,7 @@ int main(void) {
 }
 
 int _write(int fd, char *ptr, int len) {
+    (void)fd;
     LPUART_WriteBlocking(LPUART0, (uint8_t *)ptr, len);
     return len;
 }

@@ -6,32 +6,42 @@ LD = $(PREFIX)gcc
 OBJCOPY = $(PREFIX)objcopy
 SIZE = $(PREFIX)size
 
-SDK = /opt/sdk
+SDK_CMSIS = sdk/cmsis
+SDK_DEVICE = sdk/device
+SDK_DRIVERS = sdk/drivers
 BUILD_DIR = build
 
-C_SOURCES = src/main.c $(SDK)/system_MCXA155.c $(SDK)/fsl_common.c $(SDK)/fsl_clock.c $(SDK)/fsl_lpuart.c
-ASM_SOURCES = $(SDK)/startup_MCXA155.S
+C_SOURCES = \
+    src/main.c \
+    $(SDK_DEVICE)/system_MCXA155.c \
+    $(SDK_DRIVERS)/fsl_common.c \
+    $(SDK_DRIVERS)/fsl_common_arm.c \
+    $(SDK_DRIVERS)/fsl_clock.c \
+    $(SDK_DRIVERS)/fsl_reset.c \
+    $(SDK_DRIVERS)/fsl_lpuart.c
 
-INCLUDES = -I$(SDK) -Isrc
+ASM_SOURCES = $(SDK_DEVICE)/startup_MCXA155.S
+
+INCLUDES = -I$(SDK_CMSIS) -I$(SDK_DEVICE) -I$(SDK_DRIVERS) -Isrc
 
 CPU = -mcpu=cortex-m33
 FPU = -mfpu=fpv5-sp-d16
 FLOAT_ABI = -mfloat-abi=hard
 
 CFLAGS = $(CPU) $(FPU) $(FLOAT_ABI) -mthumb -Wall -Wextra -g3 -O2 -ffunction-sections -fdata-sections $(INCLUDES) -DCPU_MCXA155VLH
-ASFLAGS = $(CPU) $(FPU) $(FLOAT_ABI) -mthumb -g3
-LDFLAGS = $(CPU) $(FPU) $(FLOAT_ABI) -mthumb -T$(SDK)/MCXA155_flash.ld -Wl,--gc-sections -Wl,--print-memory-usage --specs=nano.specs --specs=nosys.specs -Wl,-Map=$(BUILD_DIR)/$(TARGET).map
+ASFLAGS = $(CPU) $(FPU) $(FLOAT_ABI) -mthumb -g3 $(INCLUDES)
+LDFLAGS = $(CPU) $(FPU) $(FLOAT_ABI) -mthumb -T$(SDK_DEVICE)/MCXA155_flash.ld -Wl,--gc-sections -Wl,--print-memory-usage --specs=nano.specs --specs=nosys.specs -Wl,-Map=$(BUILD_DIR)/$(TARGET).map
 
 C_OBJECTS = $(addprefix $(BUILD_DIR)/, $(notdir $(C_SOURCES:.c=.o)))
 ASM_OBJECTS = $(addprefix $(BUILD_DIR)/, $(notdir $(ASM_SOURCES:.S=.o)))
 OBJECTS = $(C_OBJECTS) $(ASM_OBJECTS)
 
-vpath %.c $(SDK) src
-vpath %.S $(SDK)
+vpath %.c $(SDK_DEVICE) $(SDK_DRIVERS) src
+vpath %.S $(SDK_DEVICE)
 
 .PHONY: all clean help size
 all: $(BUILD_DIR)/$(TARGET).elf $(BUILD_DIR)/$(TARGET).bin
-	@echo "✓ Build complete: $(BUILD_DIR)/$(TARGET).bin"
+	@echo "Build complete: $(BUILD_DIR)/$(TARGET).bin"
 
 $(BUILD_DIR):
 	@mkdir -p $@

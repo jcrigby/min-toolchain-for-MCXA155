@@ -3,6 +3,7 @@ set -e
 
 # MCXA155 Minimal Bootstrap
 # Run in empty directory to create complete project structure
+# Downloads and vendors SDK files for offline, reproducible builds
 
 PROJECT_NAME="mcxa155-minimal"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -18,8 +19,99 @@ mkdir -p src
 mkdir -p build
 mkdir -p scripts
 mkdir -p docs
+mkdir -p sdk/cmsis
+mkdir -p sdk/device
+mkdir -p sdk/drivers
 
-echo "✓ Directories created"
+echo "Directories created"
+echo ""
+
+# Download and vendor SDK files
+echo "Downloading SDK files..."
+
+# Check if git is available
+if ! command -v git &> /dev/null; then
+    echo "ERROR: git is required to download SDK files"
+    echo "Please install git and try again"
+    exit 1
+fi
+
+# Download CMSIS from ARM
+echo "  Fetching ARM CMSIS..."
+CMSIS_TMP=$(mktemp -d)
+git clone --depth 1 --filter=blob:none --sparse https://github.com/ARM-software/CMSIS_6.git "$CMSIS_TMP" 2>/dev/null
+cd "$CMSIS_TMP"
+git sparse-checkout set CMSIS/Core/Include 2>/dev/null
+CMSIS_COMMIT=$(git rev-parse HEAD)
+CMSIS_DATE=$(git log -1 --format=%ci | cut -d' ' -f1)
+cp CMSIS/Core/Include/core_cm33.h "$SCRIPT_DIR/sdk/cmsis/"
+cp CMSIS/Core/Include/cmsis_version.h "$SCRIPT_DIR/sdk/cmsis/"
+cp CMSIS/Core/Include/cmsis_compiler.h "$SCRIPT_DIR/sdk/cmsis/"
+cp CMSIS/Core/Include/cmsis_gcc.h "$SCRIPT_DIR/sdk/cmsis/"
+cd "$SCRIPT_DIR"
+rm -rf "$CMSIS_TMP"
+echo "  CMSIS files downloaded (commit: ${CMSIS_COMMIT:0:8})"
+
+# Download NXP SDK
+echo "  Fetching NXP MCUXpresso SDK..."
+SDK_TMP=$(mktemp -d)
+git clone --depth 1 --filter=blob:none --sparse https://github.com/nxp-mcuxpresso/mcux-sdk.git "$SDK_TMP" 2>/dev/null
+cd "$SDK_TMP"
+git sparse-checkout set devices/MCXA155 drivers/common drivers/lpuart 2>/dev/null
+SDK_COMMIT=$(git rev-parse HEAD)
+SDK_DATE=$(git log -1 --format=%ci | cut -d' ' -f1)
+
+# Copy device files
+cp devices/MCXA155/MCXA155.h "$SCRIPT_DIR/sdk/device/"
+cp devices/MCXA155/MCXA155_features.h "$SCRIPT_DIR/sdk/device/"
+cp devices/MCXA155/system_MCXA155.h "$SCRIPT_DIR/sdk/device/"
+cp devices/MCXA155/system_MCXA155.c "$SCRIPT_DIR/sdk/device/"
+cp devices/MCXA155/fsl_device_registers.h "$SCRIPT_DIR/sdk/device/"
+cp devices/MCXA155/gcc/startup_MCXA155.S "$SCRIPT_DIR/sdk/device/"
+cp devices/MCXA155/gcc/MCXA155_flash.ld "$SCRIPT_DIR/sdk/device/"
+
+# Copy driver files
+cp drivers/common/fsl_common.h "$SCRIPT_DIR/sdk/drivers/"
+cp drivers/common/fsl_common.c "$SCRIPT_DIR/sdk/drivers/"
+cp drivers/common/fsl_common_arm.h "$SCRIPT_DIR/sdk/drivers/"
+cp drivers/common/fsl_common_arm.c "$SCRIPT_DIR/sdk/drivers/"
+cp devices/MCXA155/drivers/fsl_clock.h "$SCRIPT_DIR/sdk/drivers/"
+cp devices/MCXA155/drivers/fsl_clock.c "$SCRIPT_DIR/sdk/drivers/"
+cp devices/MCXA155/drivers/fsl_reset.h "$SCRIPT_DIR/sdk/drivers/"
+cp devices/MCXA155/drivers/fsl_reset.c "$SCRIPT_DIR/sdk/drivers/"
+cp drivers/lpuart/fsl_lpuart.h "$SCRIPT_DIR/sdk/drivers/"
+cp drivers/lpuart/fsl_lpuart.c "$SCRIPT_DIR/sdk/drivers/"
+
+cd "$SCRIPT_DIR"
+rm -rf "$SDK_TMP"
+echo "  NXP SDK files downloaded (commit: ${SDK_COMMIT:0:8})"
+
+# Create SDK README
+cat > sdk/README.md << SDKEOF
+# SDK Files
+
+Vendored SDK files for MCXA155 minimal toolchain.
+
+## Sources
+
+### ARM CMSIS Core (cmsis/)
+- Repository: https://github.com/ARM-software/CMSIS_6
+- Commit: $CMSIS_COMMIT
+- Date: $CMSIS_DATE
+- License: Apache-2.0
+
+### NXP MCUXpresso SDK (device/, drivers/)
+- Repository: https://github.com/nxp-mcuxpresso/mcux-sdk
+- Commit: $SDK_COMMIT
+- Date: $SDK_DATE
+- License: BSD-3-Clause
+
+## Updating
+
+Re-run bootstrap.sh to fetch latest SDK files.
+SDKEOF
+
+echo "SDK files vendored"
 echo ""
 
 # Create .gitignore
@@ -37,7 +129,7 @@ build/
 *~
 .DS_Store
 EOF
-echo "✓ .gitignore created"
+echo ".gitignore created"
 
 # Create Dockerfile
 echo "Creating Dockerfile..."
@@ -51,13 +143,13 @@ RUN apt-get update && apt-get install -y \
     wget \
     tar \
     xz-utils \
-    git \
     make \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /workspace
 
+# Install ARM GCC toolchain
 RUN cd /tmp && \
     wget -q https://developer.arm.com/-/media/Files/downloads/gnu/13.2.rel1/binrel/arm-gnu-toolchain-13.2.rel1-x86_64-arm-none-eabi.tar.xz && \
     tar xf arm-gnu-toolchain-13.2.rel1-x86_64-arm-none-eabi.tar.xz && \
@@ -66,33 +158,12 @@ RUN cd /tmp && \
 
 ENV PATH="/opt/gcc-arm/bin:${PATH}"
 
-RUN cd /tmp && \
-    git clone --depth 1 https://github.com/nxp-mcuxpresso/mcux-sdk.git && \
-    mkdir -p /opt/sdk && \
-    cd mcux-sdk && \
-    cp devices/MCXA155/MCXA155.h /opt/sdk/ && \
-    cp devices/MCXA155/MCXA155_features.h /opt/sdk/ && \
-    cp devices/MCXA155/system_MCXA155.h /opt/sdk/ && \
-    cp devices/MCXA155/fsl_device_registers.h /opt/sdk/ && \
-    cp devices/MCXA155/system_MCXA155.c /opt/sdk/ && \
-    cp CMSIS/Core/Include/core_cm33.h /opt/sdk/ && \
-    cp CMSIS/Core/Include/cmsis_gcc.h /opt/sdk/ && \
-    cp CMSIS/Core/Include/cmsis_compiler.h /opt/sdk/ && \
-    cp CMSIS/Core/Include/cmsis_version.h /opt/sdk/ && \
-    cp devices/MCXA155/gcc/startup_MCXA155.S /opt/sdk/ && \
-    cp devices/MCXA155/gcc/MCXA155_flash.ld /opt/sdk/ && \
-    cp devices/MCXA155/drivers/fsl_common.h /opt/sdk/ && \
-    cp devices/MCXA155/drivers/fsl_common.c /opt/sdk/ && \
-    cp devices/MCXA155/drivers/fsl_clock.h /opt/sdk/ && \
-    cp devices/MCXA155/drivers/fsl_clock.c /opt/sdk/ && \
-    cp devices/MCXA155/drivers/fsl_lpuart.h /opt/sdk/ && \
-    cp devices/MCXA155/drivers/fsl_lpuart.c /opt/sdk/ && \
-    cd / && \
-    rm -rf /tmp/mcux-sdk
+# SDK files are vendored in sdk/ directory (mounted via docker-compose)
+# No git clone needed - faster builds, offline capable
 
 CMD ["make", "help"]
 EOF
-echo "✓ Dockerfile created"
+echo "Dockerfile created"
 
 # Create docker-compose.yml
 echo "Creating docker-compose.yml..."
@@ -114,7 +185,7 @@ services:
     tty: true
     command: /bin/bash
 EOF
-echo "✓ docker-compose.yml created"
+echo "docker-compose.yml created"
 
 # Create Makefile
 echo "Creating Makefile..."
@@ -127,32 +198,42 @@ LD = $(PREFIX)gcc
 OBJCOPY = $(PREFIX)objcopy
 SIZE = $(PREFIX)size
 
-SDK = /opt/sdk
+SDK_CMSIS = sdk/cmsis
+SDK_DEVICE = sdk/device
+SDK_DRIVERS = sdk/drivers
 BUILD_DIR = build
 
-C_SOURCES = src/main.c $(SDK)/system_MCXA155.c $(SDK)/fsl_common.c $(SDK)/fsl_clock.c $(SDK)/fsl_lpuart.c
-ASM_SOURCES = $(SDK)/startup_MCXA155.S
+C_SOURCES = \
+    src/main.c \
+    $(SDK_DEVICE)/system_MCXA155.c \
+    $(SDK_DRIVERS)/fsl_common.c \
+    $(SDK_DRIVERS)/fsl_common_arm.c \
+    $(SDK_DRIVERS)/fsl_clock.c \
+    $(SDK_DRIVERS)/fsl_reset.c \
+    $(SDK_DRIVERS)/fsl_lpuart.c
 
-INCLUDES = -I$(SDK) -Isrc
+ASM_SOURCES = $(SDK_DEVICE)/startup_MCXA155.S
+
+INCLUDES = -I$(SDK_CMSIS) -I$(SDK_DEVICE) -I$(SDK_DRIVERS) -Isrc
 
 CPU = -mcpu=cortex-m33
 FPU = -mfpu=fpv5-sp-d16
 FLOAT_ABI = -mfloat-abi=hard
 
 CFLAGS = $(CPU) $(FPU) $(FLOAT_ABI) -mthumb -Wall -Wextra -g3 -O2 -ffunction-sections -fdata-sections $(INCLUDES) -DCPU_MCXA155VLH
-ASFLAGS = $(CPU) $(FPU) $(FLOAT_ABI) -mthumb -g3
-LDFLAGS = $(CPU) $(FPU) $(FLOAT_ABI) -mthumb -T$(SDK)/MCXA155_flash.ld -Wl,--gc-sections -Wl,--print-memory-usage --specs=nano.specs --specs=nosys.specs -Wl,-Map=$(BUILD_DIR)/$(TARGET).map
+ASFLAGS = $(CPU) $(FPU) $(FLOAT_ABI) -mthumb -g3 $(INCLUDES)
+LDFLAGS = $(CPU) $(FPU) $(FLOAT_ABI) -mthumb -T$(SDK_DEVICE)/MCXA155_flash.ld -Wl,--gc-sections -Wl,--print-memory-usage --specs=nano.specs --specs=nosys.specs -Wl,-Map=$(BUILD_DIR)/$(TARGET).map
 
 C_OBJECTS = $(addprefix $(BUILD_DIR)/, $(notdir $(C_SOURCES:.c=.o)))
 ASM_OBJECTS = $(addprefix $(BUILD_DIR)/, $(notdir $(ASM_SOURCES:.S=.o)))
 OBJECTS = $(C_OBJECTS) $(ASM_OBJECTS)
 
-vpath %.c $(SDK) src
-vpath %.S $(SDK)
+vpath %.c $(SDK_DEVICE) $(SDK_DRIVERS) src
+vpath %.S $(SDK_DEVICE)
 
 .PHONY: all clean help size
 all: $(BUILD_DIR)/$(TARGET).elf $(BUILD_DIR)/$(TARGET).bin
-	@echo "✓ Build complete: $(BUILD_DIR)/$(TARGET).bin"
+	@echo "Build complete: $(BUILD_DIR)/$(TARGET).bin"
 
 $(BUILD_DIR):
 	@mkdir -p $@
@@ -182,7 +263,7 @@ help:
 	@echo "  make clean     - Remove build artifacts"
 	@echo "  make size      - Show binary size"
 EOF
-echo "✓ Makefile created"
+echo "Makefile created"
 
 # Create src/main.c
 echo "Creating src/main.c..."
@@ -207,21 +288,22 @@ void LPUART0_Init(void) {
 int main(void) {
     SystemInit();
     LPUART0_Init();
-    
+
     const char *msg = "\r\nHello from MCXA155!\r\n";
     LPUART_WriteBlocking(LPUART0, (uint8_t *)msg, strlen(msg));
-    
+
     while (1) {
         for (volatile uint32_t i = 0; i < 20000000; i++);
     }
 }
 
 int _write(int fd, char *ptr, int len) {
+    (void)fd;
     LPUART_WriteBlocking(LPUART0, (uint8_t *)ptr, len);
     return len;
 }
 EOF
-echo "✓ src/main.c created"
+echo "src/main.c created"
 
 # Create README.md
 echo "Creating README.md..."
@@ -254,7 +336,7 @@ screen /dev/ttyUSB0 115200
 
 - Ubuntu 22.04
 - ARM GCC 13.2 (downloads from ARM's CDN)
-- NXP MCXA155 SDK (downloads from NXP GitHub)
+- NXP MCXA155 SDK (vendored in sdk/ - no download during build)
 
 No local installation needed. Everything happens in Docker.
 
@@ -264,6 +346,7 @@ No local installation needed. Everything happens in Docker.
 .
 ├── src/              # Source code
 │   └── main.c
+├── sdk/              # Vendored SDK files (CMSIS + NXP drivers)
 ├── build/            # Compiled output (gitignored)
 ├── scripts/          # Utility scripts
 ├── docs/             # Documentation
@@ -282,7 +365,7 @@ $ arm-none-eabi-objdump -d build/firmware.elf
 $ make clean && make -j4
 ```
 EOF
-echo "✓ README.md created"
+echo "README.md created"
 
 # Create scripts/flash.sh
 echo "Creating scripts/flash.sh..."
@@ -308,10 +391,10 @@ echo "Flashing to $DEVICE..."
 blhost -p "$DEVICE" -- flash-erase-all
 blhost -p "$DEVICE" -- write-memory 0x0 "$FIRMWARE"
 blhost -p "$DEVICE" -- reset
-echo "✓ Done"
+echo "Done"
 EOF
 chmod +x scripts/flash.sh
-echo "✓ scripts/flash.sh created"
+echo "scripts/flash.sh created"
 
 # Create docs/README.md
 echo "Creating docs/README.md..."
@@ -327,6 +410,7 @@ cat > docs/README.md << 'EOF'
 ## Project Layout
 
 - `src/` - Your source code (main.c, modules, etc.)
+- `sdk/` - Vendored SDK files (see sdk/README.md for sources)
 - `scripts/` - Utility scripts (flashing, debugging, etc.)
 - `build/` - Compiled output (do not commit)
 - `Dockerfile` - Build environment definition
@@ -337,6 +421,12 @@ cat > docs/README.md << 'EOF'
 1. Create new `.c` and `.h` files in `src/`
 2. Update `Makefile` `C_SOURCES` to include them
 3. Run `make clean all`
+
+## Adding SDK Drivers
+
+1. Copy driver files from NXP mcux-sdk repo to `sdk/drivers/`
+2. Add source files to `Makefile` `C_SOURCES`
+3. Update `sdk/README.md` with source info
 
 ## Customizing Compiler Flags
 
@@ -351,11 +441,11 @@ Edit `Makefile` section `CFLAGS` to add:
 - ARM Cortex-M33 Technical Reference
 - GNU ARM Embedded Toolchain
 EOF
-echo "✓ docs/README.md created"
+echo "docs/README.md created"
 
 echo ""
 echo "=========================================="
-echo "✓ Project structure created successfully!"
+echo "Project structure created successfully!"
 echo "=========================================="
 echo ""
 echo "Directory structure:"
