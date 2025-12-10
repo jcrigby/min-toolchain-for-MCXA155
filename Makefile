@@ -22,7 +22,8 @@ C_SOURCES = \
     $(SDK_DRIVERS)/fsl_clock.c \
     $(SDK_DRIVERS)/fsl_reset.c \
     $(SDK_DRIVERS)/fsl_lpuart.c \
-    $(SDK_DRIVERS)/fsl_gpio.c
+    $(SDK_DRIVERS)/fsl_gpio.c \
+    $(SDK_DRIVERS)/fsl_spc.c
 
 ASM_SOURCES = $(SDK_DEVICE)/startup_MCXA155.S
 
