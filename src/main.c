@@ -1,41 +1,72 @@
-#include <stdint.h>
-#include <string.h>
-#include "MCXA155.h"
-#include "fsl_clock.h"
+/*
+ * Copyright (c) 2013 - 2015, Freescale Semiconductor, Inc.
+ * Copyright 2016-2017 NXP
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
+
+#include "pin_mux.h"
+#include "board.h"
 #include "fsl_lpuart.h"
 
-#define LPUART_BAUDRATE 115200
+#include "fsl_clock.h"
+#include "fsl_reset.h"
+#include <stdbool.h>
+/*******************************************************************************
+ * Definitions
+ ******************************************************************************/
+#define DEMO_LPUART          LPUART0
+#define DEMO_LPUART_CLK_FREQ (BOARD_DEBUG_UART_CLK_FREQ)
 
-void LPUART0_Init(void) {
+/*******************************************************************************
+ * Prototypes
+ ******************************************************************************/
+
+/*******************************************************************************
+ * Variables
+ ******************************************************************************/
+
+uint8_t txbuff[]   = "Lpuart polling example\r\nBoard will send back received characters\r\n";
+uint8_t rxbuff[20] = {0};
+
+/*******************************************************************************
+ * Code
+ ******************************************************************************/
+
+/*!
+ * @brief Main function
+ */
+int main(void)
+{
+    uint8_t ch;
     lpuart_config_t config;
 
-    /* Attach FRO 12MHz clock to LPUART0 */
-    CLOCK_SetClockDiv(kCLOCK_DivLPUART0, 1U);
-    CLOCK_AttachClk(kFRO12M_to_LPUART0);
+    BOARD_InitPins();
+    BOARD_InitBootClocks();
+    BOARD_InitDebugConsole();
 
-    /* Enable LPUART0 clock gate */
-    CLOCK_EnableClock(kCLOCK_GateLPUART0);
-
+    /*
+     * config.baudRate_Bps = 115200U;
+     * config.parityMode = kLPUART_ParityDisabled;
+     * config.stopBitCount = kLPUART_OneStopBit;
+     * config.txFifoWatermark = 0;
+     * config.rxFifoWatermark = 0;
+     * config.enableTx = false;
+     * config.enableRx = false;
+     */
     LPUART_GetDefaultConfig(&config);
-    config.baudRate_Bps = LPUART_BAUDRATE;
-    config.enableTx = true;
-    LPUART_Init(LPUART0, &config, CLOCK_GetLpuartClkFreq(0));
-}
+    config.baudRate_Bps = BOARD_DEBUG_UART_BAUDRATE;
+    config.enableTx     = true;
+    config.enableRx     = true;
 
-int main(void) {
-    SystemInit();
-    LPUART0_Init();
-    
-    const char *msg = "\r\nHello from MCXA155!\r\n";
-    LPUART_WriteBlocking(LPUART0, (uint8_t *)msg, strlen(msg));
-    
-    while (1) {
-        for (volatile uint32_t i = 0; i < 20000000; i++);
+    LPUART_Init(DEMO_LPUART, &config, DEMO_LPUART_CLK_FREQ);
+
+    LPUART_WriteBlocking(DEMO_LPUART, txbuff, sizeof(txbuff) - 1);
+
+    while (1)
+    {
+        LPUART_ReadBlocking(DEMO_LPUART, &ch, 1);
+        LPUART_WriteBlocking(DEMO_LPUART, &ch, 1);
     }
-}
-
-int _write(int fd, char *ptr, int len) {
-    (void)fd;
-    LPUART_WriteBlocking(LPUART0, (uint8_t *)ptr, len);
-    return len;
 }
