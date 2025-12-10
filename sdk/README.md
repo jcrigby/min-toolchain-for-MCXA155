@@ -19,20 +19,22 @@ large downloads during Docker build.
   - `cmsis_gcc.h` - GCC-specific intrinsics
   - `m-profile/` - M-profile specific headers (cmsis_gcc_m.h, etc.)
 
-### NXP MCUXpresso SDK (device/, drivers/)
+### NXP MCUXpresso SDK (device/, drivers/, utilities/, components/)
 
 - **Repository:** https://github.com/nxp-mcuxpresso/mcux-sdk
 - **Commit:** `8a289764d763ad06e0c3a05c885644ed98b970af`
 - **Date:** 2025-10-31
 - **License:** BSD-3-Clause
-- **Device Files (device/):**
+
+#### Device Files (device/)
   - `MCXA155.h` - Device register definitions
   - `MCXA155_features.h` - Device feature flags
   - `system_MCXA155.h/c` - System initialization
   - `fsl_device_registers.h` - Register include wrapper
   - `startup_MCXA155.S` - GCC startup code
   - `MCXA155_flash.ld` - Linker script (flash config)
-- **Driver Files (drivers/):**
+
+#### Driver Files (drivers/)
   - `fsl_common.h/c` - Common driver utilities
   - `fsl_common_arm.h/c` - ARM-specific utilities
   - `fsl_clock.h/c` - Clock configuration (MCXA155-specific)
@@ -41,7 +43,28 @@ large downloads during Docker build.
   - `fsl_gpio.h/c` - GPIO driver
   - `fsl_port.h` - Port pin muxing (header only)
   - `fsl_spc.h/c` - System Power Controller driver
-  - `fsl_debug_console.h` - Debug console stub (minimal, no-op implementation)
+
+#### Utility Files (utilities/)
+  - `fsl_debug_console.h/c` - Debug console lite (PRINTF support)
+  - `fsl_str.h/c` - String formatting utilities
+  - `fsl_assert.c` - Assert implementation
+
+#### Component Files (components/)
+  - `fsl_adapter_lpuart.c` - LPUART adapter for debug console
+  - `fsl_adapter_uart.h` - UART adapter interface
+  - `fsl_component_generic_list.h/c` - Generic linked list utility
+
+## Directory Structure
+
+```
+sdk/
+├── cmsis/           # ARM CMSIS Core headers
+│   └── m-profile/   # M-profile specific headers
+├── device/          # MCXA155 device files
+├── drivers/         # Peripheral drivers
+├── utilities/       # Debug console, string formatting
+└── components/      # UART adapter, lists
+```
 
 ## Updating
 
@@ -67,21 +90,22 @@ cp /tmp/mcux-sdk/drivers/lpuart/{fsl_lpuart.h,fsl_lpuart.c} sdk/drivers/
 cp /tmp/mcux-sdk/drivers/gpio/{fsl_gpio.h,fsl_gpio.c} sdk/drivers/
 cp /tmp/mcux-sdk/drivers/port/fsl_port.h sdk/drivers/
 cp /tmp/mcux-sdk/drivers/spc/{fsl_spc.h,fsl_spc.c} sdk/drivers/
-# Note: fsl_debug_console.h is a local stub, not from upstream
+
+# Copy utilities
+cp /tmp/mcux-sdk/utilities/debug_console_lite/{fsl_debug_console.h,fsl_debug_console.c} sdk/utilities/
+cp /tmp/mcux-sdk/utilities/str/{fsl_str.h,fsl_str.c} sdk/utilities/
+cp /tmp/mcux-sdk/utilities/assert/fsl_assert.c sdk/utilities/
+
+# Copy components
+cp /tmp/mcux-sdk/components/uart/{fsl_adapter_lpuart.c,fsl_adapter_uart.h} sdk/components/
+cp /tmp/mcux-sdk/components/lists/{fsl_component_generic_list.h,fsl_component_generic_list.c} sdk/components/
 
 # Update this README with new commit hashes and dates
 ```
-
-## Adding More Drivers
-
-To add additional peripheral drivers (e.g., SPI, I2C, GPIO):
-
-1. Copy driver files from `mcux-sdk/drivers/<peripheral>/`
-2. Add source files to `Makefile` C_SOURCES
-3. Update this README
 
 ## Notes
 
 - NXP's mcux-sdk repo is being deprecated in favor of mcuxsdk-manifests
 - These vendored files provide stability against upstream changes
-- Total size: ~2.3MB (vs ~500MB full SDK clone)
+- Total size: ~3MB (vs ~500MB full SDK clone)
+- Example code from: https://github.com/nxp-mcuxpresso/mcux-sdk-examples (frdmmcxa156/driver_examples/lpuart/polling)
