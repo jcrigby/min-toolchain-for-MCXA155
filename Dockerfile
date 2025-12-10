@@ -13,14 +13,13 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /workspace
 
-# Install ARM GCC toolchain
+# Install ARM GCC toolchain (xPack release from GitHub - more reliable than ARM CDN)
 RUN cd /tmp && \
-    curl -L -O --progress-bar \
-      -A "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36" \
-      https://armkeil.blob.core.windows.net/developer/Files/downloads/gnu/13.2.rel1/binrel/arm-gnu-toolchain-13.2.rel1-x86_64-arm-none-eabi.tar.xz && \
-    tar xf arm-gnu-toolchain-13.2.rel1-x86_64-arm-none-eabi.tar.xz && \
-    mv arm-gnu-toolchain-13.2.rel1-x86_64-arm-none-eabi /opt/gcc-arm && \
-    rm arm-gnu-toolchain-13.2.rel1-x86_64-arm-none-eabi.tar.xz
+    curl -L -o gcc-arm.tar.gz \
+      https://github.com/xpack-dev-tools/arm-none-eabi-gcc-xpack/releases/download/v13.2.1-1.1/xpack-arm-none-eabi-gcc-13.2.1-1.1-linux-x64.tar.gz && \
+    tar xzf gcc-arm.tar.gz && \
+    mv xpack-arm-none-eabi-gcc-13.2.1-1.1 /opt/gcc-arm && \
+    rm gcc-arm.tar.gz
 
 ENV PATH="/opt/gcc-arm/bin:${PATH}"
 
