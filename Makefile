@@ -6,6 +6,9 @@ LD = $(PREFIX)gcc
 OBJCOPY = $(PREFIX)objcopy
 SIZE = $(PREFIX)size
 
+# Select example: lpuart_polling (default) or gpio_led
+EXAMPLE ?= lpuart_polling
+
 SDK_CMSIS = sdk/cmsis
 SDK_DEVICE = sdk/device
 SDK_DRIVERS = sdk/drivers
@@ -14,7 +17,7 @@ SDK_COMPONENTS = sdk/components
 BUILD_DIR = build
 
 C_SOURCES = \
-    src/main.c \
+    src/examples/$(EXAMPLE).c \
     src/board/board.c \
     src/board/clock_config.c \
     src/board/pin_mux.c \
@@ -59,12 +62,12 @@ C_OBJECTS = $(addprefix $(BUILD_DIR)/, $(notdir $(C_SOURCES:.c=.o)))
 ASM_OBJECTS = $(addprefix $(BUILD_DIR)/, $(notdir $(ASM_SOURCES:.S=.o)))
 OBJECTS = $(C_OBJECTS) $(ASM_OBJECTS)
 
-vpath %.c $(SDK_DEVICE) $(SDK_DRIVERS) $(SDK_UTILITIES) $(SDK_COMPONENTS) src src/board
+vpath %.c $(SDK_DEVICE) $(SDK_DRIVERS) $(SDK_UTILITIES) $(SDK_COMPONENTS) src/examples src/board
 vpath %.S $(SDK_DEVICE)
 
-.PHONY: all clean help size
+.PHONY: all clean help size list-examples
 all: $(BUILD_DIR)/$(TARGET).elf $(BUILD_DIR)/$(TARGET).bin
-	@echo "Build complete: $(BUILD_DIR)/$(TARGET).bin"
+	@echo "Build complete: $(BUILD_DIR)/$(TARGET).bin (example: $(EXAMPLE))"
 
 $(BUILD_DIR):
 	@mkdir -p $@
@@ -88,8 +91,15 @@ size: $(BUILD_DIR)/$(TARGET).elf
 clean:
 	@rm -rf $(BUILD_DIR)
 
+list-examples:
+	@echo "Available examples:"
+	@ls -1 src/examples/*.c | xargs -n1 basename | sed 's/\.c$$//'
+
 help:
 	@echo "MCXA155 Build Commands"
-	@echo "  make           - Build firmware"
-	@echo "  make clean     - Remove build artifacts"
-	@echo "  make size      - Show binary size"
+	@echo "  make                     - Build default example ($(EXAMPLE))"
+	@echo "  make EXAMPLE=gpio_led    - Build GPIO LED example"
+	@echo "  make EXAMPLE=lpuart_polling - Build LPUART polling example"
+	@echo "  make list-examples       - Show available examples"
+	@echo "  make clean               - Remove build artifacts"
+	@echo "  make size                - Show binary size"

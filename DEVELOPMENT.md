@@ -5,8 +5,14 @@ A minimal toolchain for NXP MCXA155 microcontroller development using Docker.
 ## Quick Start
 
 ```bash
-# Build the firmware
+# Build the default example (LPUART polling)
 docker compose run build
+
+# Build the GPIO LED example
+docker compose run build make EXAMPLE=gpio_led
+
+# List available examples
+docker compose run build make list-examples
 
 # Output is in build/firmware.bin
 ```
@@ -15,12 +21,14 @@ docker compose run build
 
 This project provides a self-contained build environment for MCXA155 firmware without needing the full NXP MCUXpresso SDK (~500MB). Instead, only the required SDK files are vendored locally (~3MB).
 
-### Current Example
+### Available Examples
 
-The included example is the LPUART polling demo from NXP's SDK:
-- Initializes LPUART0 at 115200 baud
-- Prints "Lpuart polling example"
-- Echoes back any received characters
+| Example | Description |
+|---------|-------------|
+| `lpuart_polling` | UART echo at 115200 baud (default) |
+| `gpio_led` | Blinks red LED on GPIO3 pin 12 |
+
+Build with: `make EXAMPLE=<name>`
 
 ### Hardware Target
 
@@ -31,7 +39,9 @@ The included example is the LPUART polling demo from NXP's SDK:
 
 ```
 ├── src/
-│   ├── main.c              # Application code
+│   ├── examples/           # Example applications
+│   │   ├── lpuart_polling.c  # UART echo example
+│   │   └── gpio_led.c        # LED blink example
 │   └── board/              # Board configuration
 │       ├── board.c/h       # Board init, debug console
 │       ├── clock_config.c/h # Clock tree setup

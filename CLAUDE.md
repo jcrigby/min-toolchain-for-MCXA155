@@ -29,8 +29,14 @@ SDK files were extracted from these GitHub repositories using sparse checkout:
 ## Current State
 
 - **Builds successfully** in Docker with xPack ARM GCC 13.2.1
-- **Example**: LPUART polling (echo characters at 115200 baud)
 - **Not yet tested** on actual hardware
+
+## Available Examples
+
+Examples are in `src/examples/`. Select with `EXAMPLE=name`:
+
+- **lpuart_polling** (default) - UART echo at 115200 baud
+- **gpio_led** - Blinks red LED on GPIO3 pin 12
 
 ## SDK File Locations
 
@@ -81,10 +87,26 @@ To add a new peripheral driver (e.g., SPI, I2C, Timer):
 ## Build Commands
 
 ```bash
-docker compose run build          # Build firmware
-docker compose run shell          # Interactive shell with toolchain
-ls build/firmware.bin             # Output binary
+docker compose run build                        # Build default example (lpuart_polling)
+docker compose run build make EXAMPLE=gpio_led  # Build GPIO LED example
+docker compose run build make clean             # Clean build artifacts
+docker compose run shell                        # Interactive shell with toolchain
 ```
+
+## Adding New Examples
+
+1. **Find example** in mcux-sdk-examples repo:
+   ```bash
+   git clone --depth 1 --filter=blob:none --sparse https://github.com/nxp-mcuxpresso/mcux-sdk-examples.git /tmp/examples
+   cd /tmp/examples
+   git sparse-checkout set frdmmcxa156/driver_examples/<peripheral>
+   ```
+
+2. **Copy main source** to `src/examples/<name>.c`
+
+3. **Update pin_mux.c** if needed (merge pin configs from example's pin_mux.c)
+
+4. **Build with**: `make EXAMPLE=<name>`
 
 ## Key Defines
 
