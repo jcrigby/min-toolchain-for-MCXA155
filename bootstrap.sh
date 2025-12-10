@@ -280,11 +280,18 @@ cat > src/main.c << 'EOF'
 
 void LPUART0_Init(void) {
     lpuart_config_t config;
-    CLOCK_EnableClock(kCLOCK_Lpuart0);
+
+    /* Attach FRO 12MHz clock to LPUART0 */
+    CLOCK_SetClockDiv(kCLOCK_DivLPUART0, 1U);
+    CLOCK_AttachClk(kFRO12M_to_LPUART0);
+
+    /* Enable LPUART0 clock gate */
+    CLOCK_EnableClock(kCLOCK_GateLPUART0);
+
     LPUART_GetDefaultConfig(&config);
     config.baudRate_Bps = LPUART_BAUDRATE;
     config.enableTx = true;
-    LPUART_Init(LPUART0, &config, CLOCK_GetFreq(kCLOCK_Lpuart0));
+    LPUART_Init(LPUART0, &config, CLOCK_GetLpuartClkFreq(0));
 }
 
 int main(void) {
